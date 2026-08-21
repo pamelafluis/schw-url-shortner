@@ -120,6 +120,18 @@ class TargetUrlTest {
 				.isThrownBy(() -> TargetUrl.of("https://nowhere.example.com/x", OWN_HOST, resolver));
 	}
 
+	@Test
+	void rejectsTheServicesOwnHostRegardlessOfCase() {
+		// own-host is checked last, after DNS resolution (per spec order), so the
+		// resolver must still answer for it even though the host will be rejected.
+		HostnameResolver resolver = resolverReturning("93.184.216.34");
+
+		assertThatExceptionOfType(InvalidTargetUrlException.class)
+				.isThrownBy(() -> TargetUrl.of("https://sho.rt/loop", OWN_HOST, resolver));
+		assertThatExceptionOfType(InvalidTargetUrlException.class)
+				.isThrownBy(() -> TargetUrl.of("https://Sho.Rt/loop", OWN_HOST, resolver));
+	}
+
 	private static HostnameResolver refusingResolver() {
 		return host -> {
 			throw new AssertionError("resolver should not be consulted for an IP literal host: " + host);
