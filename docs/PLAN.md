@@ -1,6 +1,6 @@
 # Build Order
 
-**Current status:** step 0 complete — documentation foundation in place. Next: step 1, scaffold.
+**Current status:** step 1 complete — scaffold in place, health check responding via Docker Compose. Next: step 2, domain (test-first).
 
 Requirements, architecture, and the four load-bearing decisions were settled before any code was written; they live in [`../README.md`](../README.md), [`../CONTEXT.md`](../CONTEXT.md), and [`adr/`](./adr/).
 
@@ -11,7 +11,7 @@ Requirements, architecture, and the four load-bearing decisions were settled bef
 ## Steps
 
 - [x] **0 — Documentation foundation.** `README.md` (targets, API, architecture, declined scope) and this file.
-- [ ] **1 — Scaffold.** Maven, Spring Boot 3, Java 21, Docker Compose with Postgres, Flyway baseline, health check responding.
+- [x] **1 — Scaffold.** Maven, Spring Boot 4, Java 21, Docker Compose with Postgres, Flyway baseline, health check responding.
 - [ ] **2 — Domain, test-first.** ShortCode generation, TargetUrl and SSRF validation, Alias rules and reserved words, expiry evaluation. Pure JUnit, no Spring, no database. Red → green → refactor, visible in the history.
 - [ ] **3 — Persistence.** Spring Data JDBC adapter, unique index on ShortCode, Testcontainers integration tests including the collision-retry path.
 - [ ] **4 — API.** Create, resolve, get, deactivate. MockMvc contract tests written first. `problem+json` mapping, API key filter, ownership check on delete.

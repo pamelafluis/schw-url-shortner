@@ -1,0 +1,2 @@
+-- Baseline migration. Establishes Flyway's schema history table.
+-- The short_link schema arrives in step 3 (persistence).
