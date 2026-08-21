@@ -2,8 +2,6 @@
 
 **Current status:** step 1 complete — scaffold in place, health check responding via Docker Compose. Next: step 2, domain (test-first).
 
-**Deviation from plan:** step 1 targeted Spring Boot 3, but by the time this step was built, start.spring.io's compatibility floor had moved to Boot >=4.0.0 and 3.x was no longer generatable there (3.5.16 still resolves from Maven Central, but hand-writing the pom to pin a version headed for end-of-support was judged worse than taking current Boot 4.1.1). README and CONTEXT.md are otherwise unaffected — this only touches the scaffold.
-
 Requirements, architecture, and the four load-bearing decisions were settled before any code was written; they live in [`../README.md`](../README.md), [`../CONTEXT.md`](../CONTEXT.md), and [`adr/`](./adr/).
 
 **This file is kept current as a matter of discipline:** the commit that completes a step is the commit that ticks its box and updates the status line above. It is never more than one commit out of date.

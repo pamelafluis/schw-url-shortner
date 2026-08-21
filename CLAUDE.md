@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A URL shortener service (Spring Boot 4.1.1 / Java 21 / Postgres). Full requirements, API contract, and architecture are documented in [`README.md`](./README.md) — read it before making non-trivial changes, don't duplicate it here. Domain vocabulary (ShortLink, ShortCode, Alias, TargetUrl, Resolution, Click, Deactivation) is fixed by [`CONTEXT.md`](./CONTEXT.md); use those exact terms in code, commits, and discussion, and avoid the synonyms it lists (e.g. never "slug"/"hash" for ShortCode, never "hit"/"visit" for Resolution).
 
-**This is an interview take-home with a ~1-day time budget**, graded on visible judgment. Cut scope before polish — see the pre-committed drop order in `docs/PLAN.md`. Four ADRs in `docs/adr/` record the load-bearing design decisions (random base62 codes over sequences, 302 over 301, approximate click counting, Postgres behind a bounded-staleness cache) — read the relevant one before touching code in that area, since each documents alternatives already considered and rejected.
+See the pre-committed drop order in `docs/PLAN.md`. Four ADRs in `docs/adr/` record the load-bearing design decisions (random base62 codes over sequences, 302 over 301, approximate click counting, Postgres behind a bounded-staleness cache) — read the relevant one before touching code in that area, since each documents alternatives already considered and rejected.
 
 ## Commands
 
@@ -53,7 +53,3 @@ GET /{code}
 Clicks never touch the database on the request path — they accumulate in memory (planned: `LongAdder` registry) and flush on a timer, which is why Resolution and Click are deliberately distinct concepts (see CONTEXT.md) with a stated, bounded loss budget (ADR-0003).
 
 Testing follows the same domain/adapter split: domain logic gets plain JUnit with no Spring and no database, written test-first; API contract tests use MockMvc written before the controllers; persistence/integration tests use Testcontainers Postgres, including the ShortCode collision-retry path that ADR-0001's uniqueness guarantee depends on.
-
-## Notable deviation from the original plan
-
-The scaffold targets Spring Boot 4.1.1, not the originally planned Boot 3 — by the time it was built, start.spring.io's compatibility floor had moved to `>=4.0.0` and 3.x was no longer generatable there. Documented in `docs/PLAN.md`.
