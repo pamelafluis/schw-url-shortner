@@ -44,6 +44,13 @@ class ShortCodeTest {
 	}
 
 	@Test
+	void fromAliasAcceptsThreeCharacters() {
+		ShortCode code = ShortCode.fromAlias("abc");
+
+		assertThat(code.value()).isEqualTo("abc");
+	}
+
+	@Test
 	void fromAliasRejectsAliasLongerThanThirtyTwoCharacters() {
 		String tooLong = "a".repeat(33);
 

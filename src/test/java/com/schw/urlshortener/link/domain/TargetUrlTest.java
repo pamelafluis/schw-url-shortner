@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.schw.urlshortener.link.domain.HostnameResolverFixtures.refusingResolver;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -130,12 +131,6 @@ class TargetUrlTest {
 				.isThrownBy(() -> TargetUrl.of("https://sho.rt/loop", OWN_HOST, resolver));
 		assertThatExceptionOfType(InvalidTargetUrlException.class)
 				.isThrownBy(() -> TargetUrl.of("https://Sho.Rt/loop", OWN_HOST, resolver));
-	}
-
-	private static HostnameResolver refusingResolver() {
-		return host -> {
-			throw new AssertionError("resolver should not be consulted for an IP literal host: " + host);
-		};
 	}
 
 	private static HostnameResolver resolverReturning(String... literalIps) {

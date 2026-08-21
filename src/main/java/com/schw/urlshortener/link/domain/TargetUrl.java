@@ -84,6 +84,8 @@ public final class TargetUrl {
 	}
 
 	private static void requireNotBlocked(InetAddress address, String rawUrl) {
+		// isAnyLocalAddress() (0.0.0.0/::) is outside issue #4's explicit range list, but
+		// it's the same class of degenerate, never-a-legitimate-target address as the rest.
 		if (address.isLoopbackAddress() || address.isLinkLocalAddress()
 				|| address.isSiteLocalAddress() || address.isAnyLocalAddress()) {
 			throw new InvalidTargetUrlException(

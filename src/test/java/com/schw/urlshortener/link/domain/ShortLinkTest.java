@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
+import static com.schw.urlshortener.link.domain.HostnameResolverFixtures.refusingResolver;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ShortLinkTest {
@@ -25,6 +26,16 @@ class ShortLinkTest {
 		ShortLink link = newShortLink(Optional.of(expiresAt));
 
 		assertThat(link.resolutionOutcome(expiresAt.minusSeconds(1))).isEqualTo(ResolutionOutcome.RESOLVABLE);
+	}
+
+	@Test
+	void isResolvableAtTheExactExpiryInstant() {
+		// expiresAt is the last resolvable instant (isAfter is exclusive) — locking in
+		// this boundary choice since the spec doesn't state inclusive/exclusive.
+		Instant expiresAt = CREATED_AT.plus(1, ChronoUnit.DAYS);
+		ShortLink link = newShortLink(Optional.of(expiresAt));
+
+		assertThat(link.resolutionOutcome(expiresAt)).isEqualTo(ResolutionOutcome.RESOLVABLE);
 	}
 
 	@Test
@@ -84,12 +95,6 @@ class ShortLinkTest {
 		ShortCode code = ShortCode.generate();
 		TargetUrl targetUrl = TargetUrl.of("https://93.184.216.34/x", "sho.rt", refusingResolver());
 		return new ShortLink(code, targetUrl, "api-key-1", CREATED_AT, expiresAt);
-	}
-
-	private static HostnameResolver refusingResolver() {
-		return host -> {
-			throw new AssertionError("resolver should not be consulted for an IP literal host: " + host);
-		};
 	}
 
 }
