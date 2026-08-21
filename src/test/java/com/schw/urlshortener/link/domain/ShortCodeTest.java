@@ -3,6 +3,7 @@ package com.schw.urlshortener.link.domain;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class ShortCodeTest {
 
@@ -34,6 +35,68 @@ class ShortCodeTest {
 		ShortCode upper = ShortCode.fromAlias("Launch");
 
 		assertThat(lower).isNotEqualTo(upper);
+	}
+
+	@Test
+	void fromAliasRejectsAliasShorterThanThreeCharacters() {
+		assertThatExceptionOfType(MalformedAliasException.class)
+				.isThrownBy(() -> ShortCode.fromAlias("ab"));
+	}
+
+	@Test
+	void fromAliasRejectsAliasLongerThanThirtyTwoCharacters() {
+		String tooLong = "a".repeat(33);
+
+		assertThatExceptionOfType(MalformedAliasException.class)
+				.isThrownBy(() -> ShortCode.fromAlias(tooLong));
+	}
+
+	@Test
+	void fromAliasAcceptsThirtyTwoCharacters() {
+		String maxLength = "a".repeat(32);
+
+		ShortCode code = ShortCode.fromAlias(maxLength);
+
+		assertThat(code.value()).isEqualTo(maxLength);
+	}
+
+	@Test
+	void fromAliasRejectsCharactersOutsideTheAllowedCharset() {
+		assertThatExceptionOfType(MalformedAliasException.class)
+				.isThrownBy(() -> ShortCode.fromAlias("bad alias!"));
+	}
+
+	@Test
+	void fromAliasAcceptsUnderscoreAndHyphen() {
+		ShortCode code = ShortCode.fromAlias("launch_day-1");
+
+		assertThat(code.value()).isEqualTo("launch_day-1");
+	}
+
+	@Test
+	void fromAliasRejectsReservedWords() {
+		for (String reserved : new String[] {"api", "health", "actuator", "metrics", "docs", "robots.txt", "favicon.ico"}) {
+			assertThatExceptionOfType(ReservedAliasException.class)
+					.describedAs("alias '%s' should be reserved", reserved)
+					.isThrownBy(() -> ShortCode.fromAlias(reserved));
+		}
+	}
+
+	@Test
+	void reservedWordCheckTakesPrecedenceOverCharsetForRobotsAndFaviconAliases() {
+		// robots.txt and favicon.ico contain '.', which also fails the charset rule.
+		// They must still be reported as reserved (409), not malformed (400).
+		assertThatExceptionOfType(ReservedAliasException.class)
+				.isThrownBy(() -> ShortCode.fromAlias("robots.txt"));
+		assertThatExceptionOfType(ReservedAliasException.class)
+				.isThrownBy(() -> ShortCode.fromAlias("favicon.ico"));
+	}
+
+	@Test
+	void reservedWordMatchingIsCaseSensitive() {
+		ShortCode code = ShortCode.fromAlias("API");
+
+		assertThat(code.value()).isEqualTo("API");
 	}
 
 }
