@@ -20,7 +20,7 @@ public final class TargetUrl {
 	public static TargetUrl of(String rawUrl, String ownHost, HostnameResolver resolver) {
 		URI uri = parse(rawUrl);
 		requireHttpOrHttpsScheme(uri, rawUrl);
-		requireAllowedHost(uri, rawUrl, resolver);
+		requireAllowedHost(uri, rawUrl, ownHost, resolver);
 		return new TargetUrl(rawUrl);
 	}
 
@@ -40,7 +40,7 @@ public final class TargetUrl {
 		}
 	}
 
-	private static void requireAllowedHost(URI uri, String rawUrl, HostnameResolver resolver) {
+	private static void requireAllowedHost(URI uri, String rawUrl, String ownHost, HostnameResolver resolver) {
 		String host = uri.getHost();
 		if (host == null || host.isEmpty()) {
 			throw new InvalidTargetUrlException("TargetUrl '%s' has no host".formatted(rawUrl));
@@ -55,6 +55,9 @@ public final class TargetUrl {
 			for (InetAddress address : resolve(host, rawUrl, resolver)) {
 				requireNotBlocked(address, rawUrl);
 			}
+		}
+		if (host.equalsIgnoreCase(ownHost)) {
+			throw new InvalidTargetUrlException("TargetUrl '%s' targets the service's own host".formatted(rawUrl));
 		}
 	}
 
