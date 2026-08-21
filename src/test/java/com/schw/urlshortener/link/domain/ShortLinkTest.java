@@ -55,6 +55,22 @@ class ShortLinkTest {
 	}
 
 	@Test
+	void exposesTheConstructorArgumentsAsData() {
+		Instant expiresAt = CREATED_AT.plus(1, ChronoUnit.DAYS);
+		ShortCode code = ShortCode.generate();
+		TargetUrl targetUrl = TargetUrl.of("https://93.184.216.34/x", "sho.rt", refusingResolver());
+
+		ShortLink link = new ShortLink(code, targetUrl, "api-key-1", CREATED_AT, Optional.of(expiresAt));
+
+		assertThat(link.code()).isEqualTo(code);
+		assertThat(link.targetUrl()).isEqualTo(targetUrl);
+		assertThat(link.createdBy()).isEqualTo("api-key-1");
+		assertThat(link.createdAt()).isEqualTo(CREATED_AT);
+		assertThat(link.expiresAt()).contains(expiresAt);
+		assertThat(link.active()).isTrue();
+	}
+
+	@Test
 	void deactivationNeverChangesTheShortCode() {
 		ShortLink link = newShortLink(Optional.empty());
 		ShortCode codeBeforeDeactivation = link.code();
