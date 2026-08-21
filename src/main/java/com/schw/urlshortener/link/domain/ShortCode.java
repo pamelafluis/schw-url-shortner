@@ -2,6 +2,8 @@ package com.schw.urlshortener.link.domain;
 
 import java.security.SecureRandom;
 import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 public final class ShortCode {
 
@@ -9,6 +11,14 @@ public final class ShortCode {
 			"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 	private static final int LENGTH = 7;
 	private static final SecureRandom RANDOM = new SecureRandom();
+
+	private static final Pattern ALIAS_CHARSET = Pattern.compile("[A-Za-z0-9_-]{3,32}");
+
+	// Checked verbatim against the raw alias, before charset validation: robots.txt
+	// and favicon.ico contain '.', which would otherwise fail as malformed (400)
+	// instead of reserved (409).
+	private static final Set<String> RESERVED_ALIASES =
+			Set.of("api", "health", "actuator", "metrics", "docs", "robots.txt", "favicon.ico");
 
 	private final String value;
 
@@ -25,6 +35,12 @@ public final class ShortCode {
 	}
 
 	public static ShortCode fromAlias(String rawAlias) {
+		if (RESERVED_ALIASES.contains(rawAlias)) {
+			throw new ReservedAliasException(rawAlias);
+		}
+		if (!ALIAS_CHARSET.matcher(rawAlias).matches()) {
+			throw new MalformedAliasException(rawAlias);
+		}
 		return new ShortCode(rawAlias);
 	}
 
