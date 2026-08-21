@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: url-shortener
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:url_shortener}
+    username: ${DB_USER:url_shortener}
+    password: ${DB_PASSWORD:url_shortener}
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
