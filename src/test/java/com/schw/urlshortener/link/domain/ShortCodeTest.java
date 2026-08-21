@@ -13,4 +13,27 @@ class ShortCodeTest {
 		assertThat(code.value()).hasSize(7).matches("[A-Za-z0-9]{7}");
 	}
 
+	@Test
+	void fromAliasProducesShortCodeWithTheAliasValue() {
+		ShortCode code = ShortCode.fromAlias("launch");
+
+		assertThat(code.value()).isEqualTo("launch");
+	}
+
+	@Test
+	void shortCodesWithTheSameValueAreEqual() {
+		ShortCode a = ShortCode.fromAlias("launch");
+		ShortCode b = ShortCode.fromAlias("launch");
+
+		assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
+	}
+
+	@Test
+	void aliasComparisonIsCaseSensitive() {
+		ShortCode lower = ShortCode.fromAlias("launch");
+		ShortCode upper = ShortCode.fromAlias("Launch");
+
+		assertThat(lower).isNotEqualTo(upper);
+	}
+
 }
