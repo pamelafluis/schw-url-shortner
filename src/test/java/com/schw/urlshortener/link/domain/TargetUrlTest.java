@@ -85,6 +85,41 @@ class TargetUrlTest {
 		assertThat(targetUrl.value()).isEqualTo("http://93.184.216.34/x");
 	}
 
+	@Test
+	void rejectsAHostnameThatResolvesToAPrivateAddress() {
+		HostnameResolver resolver = resolverReturning("10.0.0.5");
+
+		assertThatExceptionOfType(InvalidTargetUrlException.class)
+				.isThrownBy(() -> TargetUrl.of("https://internal.example.com/x", OWN_HOST, resolver));
+	}
+
+	@Test
+	void rejectsAHostnameWhenAnyResolvedAddressIsBlocked() {
+		HostnameResolver resolver = resolverReturning("93.184.216.34", "169.254.169.254");
+
+		assertThatExceptionOfType(InvalidTargetUrlException.class)
+				.isThrownBy(() -> TargetUrl.of("https://multi.example.com/x", OWN_HOST, resolver));
+	}
+
+	@Test
+	void acceptsAHostnameWhereAllResolvedAddressesArePublic() {
+		HostnameResolver resolver = resolverReturning("93.184.216.34", "203.0.113.7");
+
+		TargetUrl targetUrl = TargetUrl.of("https://multi-public.example.com/x", OWN_HOST, resolver);
+
+		assertThat(targetUrl.value()).isEqualTo("https://multi-public.example.com/x");
+	}
+
+	@Test
+	void rejectsAHostnameTheResolverCannotResolve() {
+		HostnameResolver resolver = host -> {
+			throw new UnknownHostException(host);
+		};
+
+		assertThatExceptionOfType(InvalidTargetUrlException.class)
+				.isThrownBy(() -> TargetUrl.of("https://nowhere.example.com/x", OWN_HOST, resolver));
+	}
+
 	private static HostnameResolver refusingResolver() {
 		return host -> {
 			throw new AssertionError("resolver should not be consulted for an IP literal host: " + host);
