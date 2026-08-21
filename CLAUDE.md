@@ -53,3 +53,13 @@ GET /{code}
 Clicks never touch the database on the request path — they accumulate in memory (planned: `LongAdder` registry) and flush on a timer, which is why Resolution and Click are deliberately distinct concepts (see CONTEXT.md) with a stated, bounded loss budget (ADR-0003).
 
 Testing follows the same domain/adapter split: domain logic gets plain JUnit with no Spring and no database, written test-first; API contract tests use MockMvc written before the controllers; persistence/integration tests use Testcontainers Postgres, including the ShortCode collision-retry path that ADR-0001's uniqueness guarantee depends on.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues (`pamelafluis/schw-url-shortner`), managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
