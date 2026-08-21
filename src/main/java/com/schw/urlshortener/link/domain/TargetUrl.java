@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.regex.Pattern;
 
 public final class TargetUrl {
@@ -49,6 +50,20 @@ public final class TargetUrl {
 		}
 		if (isIpLiteral(host)) {
 			requireNotBlocked(parseLiteral(host, rawUrl), rawUrl);
+		}
+		else {
+			for (InetAddress address : resolve(host, rawUrl, resolver)) {
+				requireNotBlocked(address, rawUrl);
+			}
+		}
+	}
+
+	private static List<InetAddress> resolve(String host, String rawUrl, HostnameResolver resolver) {
+		try {
+			return resolver.resolve(host);
+		}
+		catch (UnknownHostException e) {
+			throw new InvalidTargetUrlException("TargetUrl '%s' host does not resolve".formatted(rawUrl));
 		}
 	}
 
