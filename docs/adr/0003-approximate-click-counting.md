@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Clicks are approximate and eventually consistent

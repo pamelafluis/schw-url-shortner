@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Postgres behind an in-process cache, with bounded staleness

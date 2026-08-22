@@ -1,6 +1,6 @@
 # Build Order
 
-**Current status:** step 7 complete — structured JSON logging with request-ID correlation, Micrometer Resolution-outcome counter and redirect timer, OpenAPI description of `/api/v1/links`, and a GitHub Actions CI workflow running `./mvnw verify` on push/PR. Next: step 8, docs close-out.
+**Current status:** step 8 complete — README reconciled against the built system (Operability section added, architecture diagram updated for `link/click`, status line corrected), all four ADRs flipped from `proposed` to `accepted` (each held up against the code as built, so none needed rewriting), and the Cuts section below filled in. Next: step 9, load test.
 
 Requirements, architecture, and the four load-bearing decisions were settled before any code was written; they live in [`../README.md`](../README.md), [`../CONTEXT.md`](../CONTEXT.md), and [`adr/`](./adr/).
 
@@ -18,7 +18,7 @@ Requirements, architecture, and the four load-bearing decisions were settled bef
 - [x] **5 — Cache.** Caffeine behind the port: TTL clamped to `min(60s, time-to-expiry)`, negative caching, bounded size, eviction on write. Test that a deactivated ShortLink stops resolving locally.
 - [x] **6 — Clicks.** LongAdder registry, scheduled batch flush, shutdown hook. Test that N Resolutions produce N Clicks once flushed.
 - [x] **7 — Operability.** Structured JSON logging with request IDs, Micrometer counters and timers, OpenAPI, GitHub Actions CI.
-- [ ] **8 — Docs close-out.** Reconcile the README against what was actually built. Flip ADRs 0001–0004 from `status: proposed` to `accepted` — or rewrite any that did not survive contact with the code, which makes for a better record than one that was right first time. Fill in **Cuts** below.
+- [x] **8 — Docs close-out.** Reconcile the README against what was actually built. Flip ADRs 0001–0004 from `status: proposed` to `accepted` — or rewrite any that did not survive contact with the code, which makes for a better record than one that was right first time. Fill in **Cuts** below.
 - [ ] **9 — Load test.** k6 against the redirect path; record the real p99 in the README, whatever it says.
 
 ---
@@ -37,7 +37,7 @@ Anything dropped gets an entry below and a paragraph in the README's *Deliberate
 
 ## Cuts
 
-*Nothing cut yet. Recorded here as it happens, in the commit where the decision is made.*
+Nothing from the pre-committed drop order was actually cut. Custom Aliases (step 4) and Click counting (step 6) both shipped in full, ahead of the point where the day's budget would have forced dropping them. The k6 load test (step 9) is the one item from the drop order not yet done, but it remains a planned step, not a cut — it's next, not dropped.
 
 ---
 

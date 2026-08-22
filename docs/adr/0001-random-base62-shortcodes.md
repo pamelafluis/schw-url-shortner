@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Random base62 ShortCodes, not a sequence

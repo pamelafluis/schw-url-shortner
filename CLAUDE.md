@@ -35,10 +35,11 @@ link/domain      ← ShortLink, ShortCode, TargetUrl, code generation,
 link/api         ← REST adapter, problem+json (RFC 9457) mapping, API key filter
 link/persistence ← Postgres adapter (Spring Data JDBC), Flyway migrations
 link/cache       ← Caffeine adapter, behind a port (see ADR-0004)
+link/click       ← LongAdder registry, scheduled flush, shutdown hook
 shared/          ← request IDs, error plumbing
 ```
 
-As of this writing only the scaffold exists (`UrlShortenerApplication`, `application.yml`, the Flyway baseline migration, the actuator health check) — the `link/*` packages above are the target layout for the domain/persistence/API/cache steps in `docs/PLAN.md`, not yet present.
+All steps through 8 in `docs/PLAN.md` are complete; only the step-9 load test remains.
 
 **The resolution path** (`GET /{code}`) is the hot path and the one perf targets in the README are about:
 

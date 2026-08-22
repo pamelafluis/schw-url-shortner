@@ -4,7 +4,7 @@ A service that issues short, opaque codes standing in for longer destinations, a
 
 Links can carry a caller-chosen alias, expire on a schedule, and be deactivated; resolutions are counted. The vocabulary used throughout the code is defined in [`CONTEXT.md`](./CONTEXT.md) — **ShortLink**, **ShortCode**, **Alias**, **TargetUrl**, **Resolution**, **Click** — and those words mean exactly what that file says they mean.
 
-> **Status:** under construction. See [`docs/PLAN.md`](./docs/PLAN.md) for the build order and what is done so far.
+> **Status:** feature-complete (steps 0–8 of [`docs/PLAN.md`](./docs/PLAN.md)). The k6 load test (step 9) is the one item outstanding; the "Measured latency" figures below are placeholders until it runs.
 
 ---
 
@@ -129,6 +129,7 @@ link/domain      ← ShortLink, ShortCode, TargetUrl, code generation,
 link/api         ← REST adapter, problem+json mapping, API key filter
 link/persistence ← Postgres adapter (Spring Data JDBC), Flyway migrations
 link/cache       ← Caffeine adapter, behind a port
+link/click       ← LongAdder registry, scheduled flush, shutdown hook
 shared/          ← request IDs, error plumbing
 ```
 
@@ -147,6 +148,15 @@ GET /{code}
 ```
 
 Clicks never touch the database on the request path; they accumulate in memory and flush on a timer.
+
+---
+
+## Operability
+
+- **Logging.** Structured JSON on stdout (`logstash-logback-encoder`). Every request is assigned a request ID — an inbound `X-Request-Id` is honored, otherwise one is generated — put in MDC for the request's duration and echoed back as a response header, so every log line from that request, including framework logs, can be correlated and handed to an operator.
+- **Metrics.** Micrometer, exposed at `/actuator/prometheus`: `link.resolutions` (counter, tagged `outcome=resolvable|expired|deactivated|not-found`) and `link.resolve` (timer), both on the hot path.
+- **OpenAPI.** `springdoc-openapi` documents `/api/v1/links/**` (create, get, deactivate); served at `/v3/api-docs` and `/swagger-ui.html`. The unauthenticated `GET /{code}` resolve path is deliberately excluded — it isn't a caller-facing API surface to document, it's a redirect.
+- **CI.** GitHub Actions runs `./mvnw verify` — unit and Testcontainers integration tests — on every push and pull request.
 
 ---
 
