@@ -3,6 +3,8 @@ package com.schw.urlshortener.link.api;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -11,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.schw.urlshortener.link.cache.LinkCache;
 import com.schw.urlshortener.link.domain.HostnameResolver;
 import com.schw.urlshortener.link.domain.ShortCode;
 import com.schw.urlshortener.link.domain.ShortLink;
@@ -44,6 +47,7 @@ class LinksControllerTest {
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
   @MockitoBean private ShortLinkRepository repository;
+  @MockitoBean private LinkCache cache;
 
   // --- POST /api/v1/links ---
 
@@ -191,6 +195,8 @@ class LinksControllerTest {
     mockMvc
         .perform(delete("/api/v1/links/aB3xK9z").header("X-API-Key", "dev-key"))
         .andExpect(status().isNoContent());
+
+    verify(cache).invalidate(ShortCode.reconstitute("aB3xK9z"));
   }
 
   @Test
@@ -205,6 +211,8 @@ class LinksControllerTest {
         .perform(delete("/api/v1/links/aB3xK9z").header("X-API-Key", "dev-key"))
         .andExpect(status().isForbidden())
         .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+    verify(cache, never()).invalidate(any());
   }
 
   @Test
