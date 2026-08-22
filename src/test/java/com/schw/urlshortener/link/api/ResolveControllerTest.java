@@ -17,6 +17,8 @@ import com.schw.urlshortener.link.domain.ShortCode;
 import com.schw.urlshortener.link.domain.ShortLink;
 import com.schw.urlshortener.link.domain.TargetUrl;
 import com.schw.urlshortener.link.persistence.ShortLinkRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -40,6 +42,7 @@ class ResolveControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ClickRegistry clickRegistry;
+  @Autowired private MeterRegistry meterRegistry;
   @MockitoBean private ShortLinkRepository repository;
   @MockitoBean private LinkCache cache;
 
@@ -169,6 +172,66 @@ class ResolveControllerTest {
     mockMvc.perform(get("/aB3xK9z")).andExpect(status().isFound());
   }
 
+  // --- Request ID (issue #13): RequestIdFilter runs ahead of every request, including this one ---
+
+  @Test
+  void responseCarriesAGeneratedRequestIdWhenCallerSuppliesNone() throws Exception {
+    given(repository.findByCode(ShortCode.reconstitute("nvrissud"))).willReturn(Optional.empty());
+
+    mockMvc.perform(get("/nvrissud")).andExpect(header().exists("X-Request-Id"));
+  }
+
+  @Test
+  void twoRequestsWithoutASuppliedRequestIdGetDifferentGeneratedIds() throws Exception {
+    given(repository.findByCode(ShortCode.reconstitute("nvrissud"))).willReturn(Optional.empty());
+
+    String first =
+        mockMvc.perform(get("/nvrissud")).andReturn().getResponse().getHeader("X-Request-Id");
+    String second =
+        mockMvc.perform(get("/nvrissud")).andReturn().getResponse().getHeader("X-Request-Id");
+
+    assertThat(first).isNotBlank();
+    assertThat(second).isNotBlank();
+    assertThat(first).isNotEqualTo(second);
+  }
+
+  @Test
+  void aCallerSuppliedRequestIdIsEchoedBackUnchanged() throws Exception {
+    given(repository.findByCode(ShortCode.reconstitute("nvrissud"))).willReturn(Optional.empty());
+
+    mockMvc
+        .perform(get("/nvrissud").header("X-Request-Id", "caller-supplied-id"))
+        .andExpect(header().string("X-Request-Id", "caller-supplied-id"));
+  }
+
+  // --- Metrics (issue #13): outcome counter tagged per ResolutionOutcome, including not-found ---
+
+  @Test
+  void resolvableCodeIncrementsTheResolutionsCounterTaggedResolvable() throws Exception {
+    ShortLink shortLink =
+        new ShortLink(
+            ShortCode.reconstitute("aB3xK9z"), TARGET_URL, "dev-key", NOW, Optional.empty());
+    given(repository.findByCode(ShortCode.reconstitute("aB3xK9z")))
+        .willReturn(Optional.of(shortLink));
+    double before = meterRegistry.counter("link.resolutions", "outcome", "resolvable").count();
+
+    mockMvc.perform(get("/aB3xK9z")).andExpect(status().isFound());
+
+    assertThat(meterRegistry.counter("link.resolutions", "outcome", "resolvable").count())
+        .isEqualTo(before + 1.0);
+  }
+
+  @Test
+  void unissuedCodeIncrementsTheResolutionsCounterTaggedNotFound() throws Exception {
+    given(repository.findByCode(ShortCode.reconstitute("nvrissud"))).willReturn(Optional.empty());
+    double before = meterRegistry.counter("link.resolutions", "outcome", "not-found").count();
+
+    mockMvc.perform(get("/nvrissud")).andExpect(status().isNotFound());
+
+    assertThat(meterRegistry.counter("link.resolutions", "outcome", "not-found").count())
+        .isEqualTo(before + 1.0);
+  }
+
   @Test
   void cachedHitRedirectsWithoutConsultingPostgres() throws Exception {
     ShortLink shortLink =
@@ -262,6 +325,11 @@ class ResolveControllerTest {
     @Bean
     ClickRegistry clickRegistry() {
       return new ClickRegistry();
+    }
+
+    @Bean
+    MeterRegistry meterRegistry() {
+      return new SimpleMeterRegistry();
     }
   }
 }
