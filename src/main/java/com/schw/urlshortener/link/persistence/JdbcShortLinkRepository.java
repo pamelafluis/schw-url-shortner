@@ -4,12 +4,15 @@ import com.schw.urlshortener.link.domain.ShortCode;
 import com.schw.urlshortener.link.domain.ShortLink;
 import com.schw.urlshortener.link.domain.TargetUrl;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.jdbc.core.JdbcAggregateTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -20,17 +23,22 @@ public class JdbcShortLinkRepository implements ShortLinkRepository {
   private static final int MAX_RETRIES = 3;
 
   private final JdbcAggregateTemplate template;
+  private final JdbcTemplate jdbcTemplate;
   private final Supplier<ShortCode> codeGenerator;
 
   @Autowired
-  public JdbcShortLinkRepository(JdbcAggregateTemplate template) {
-    this(template, ShortCode::generate);
+  public JdbcShortLinkRepository(JdbcAggregateTemplate template, JdbcTemplate jdbcTemplate) {
+    this(template, jdbcTemplate, ShortCode::generate);
   }
 
   // Test-only seam: lets the collision-retry path be exercised deterministically
   // instead of relying on an astronomically unlikely real random collision.
-  JdbcShortLinkRepository(JdbcAggregateTemplate template, Supplier<ShortCode> codeGenerator) {
+  JdbcShortLinkRepository(
+      JdbcAggregateTemplate template,
+      JdbcTemplate jdbcTemplate,
+      Supplier<ShortCode> codeGenerator) {
     this.template = template;
+    this.jdbcTemplate = jdbcTemplate;
     this.codeGenerator = codeGenerator;
   }
 
@@ -82,6 +90,19 @@ public class JdbcShortLinkRepository implements ShortLinkRepository {
     template.update(entity.deactivated());
   }
 
+  @Override
+  public void recordClicks(Map<ShortCode, Long> deltas) {
+    if (deltas.isEmpty()) {
+      return;
+    }
+    List<Object[]> batchArgs =
+        deltas.entrySet().stream()
+            .map(entry -> new Object[] {entry.getValue(), entry.getKey().value()})
+            .toList();
+    jdbcTemplate.batchUpdate(
+        "UPDATE short_link SET click_count = click_count + ? WHERE short_code = ?", batchArgs);
+  }
+
   private static ShortLinkEntity toEntity(ShortLink shortLink) {
     return new ShortLinkEntity(
         shortLink.code().value(),
@@ -89,7 +110,8 @@ public class JdbcShortLinkRepository implements ShortLinkRepository {
         shortLink.createdBy(),
         shortLink.createdAt(),
         shortLink.expiresAt().orElse(null),
-        shortLink.active());
+        shortLink.active(),
+        shortLink.clickCount());
   }
 
   private ShortLink toDomain(ShortLinkEntity entity) {
@@ -99,7 +121,8 @@ public class JdbcShortLinkRepository implements ShortLinkRepository {
             TargetUrl.reconstitute(entity.targetUrl()),
             entity.createdBy(),
             entity.createdAt(),
-            Optional.ofNullable(entity.expiresAt()));
+            Optional.ofNullable(entity.expiresAt()),
+            entity.clickCount());
     if (!entity.active()) {
       shortLink.deactivate();
     }

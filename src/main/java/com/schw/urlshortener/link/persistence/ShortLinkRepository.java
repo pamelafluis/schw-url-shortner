@@ -4,6 +4,7 @@ import com.schw.urlshortener.link.domain.ShortCode;
 import com.schw.urlshortener.link.domain.ShortLink;
 import com.schw.urlshortener.link.domain.TargetUrl;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -29,4 +30,11 @@ public interface ShortLinkRepository {
   Optional<ShortLink> findByCode(ShortCode code);
 
   void deactivate(ShortCode code);
+
+  /**
+   * Applies each delta as {@code click_count = click_count + delta}, never an overwrite, so
+   * concurrent flushes (and any future multi-instance deployment) can't lose an update to a race.
+   * See ADR-0003.
+   */
+  void recordClicks(Map<ShortCode, Long> deltas);
 }

@@ -1,6 +1,7 @@
 package com.schw.urlshortener.link.api;
 
 import com.schw.urlshortener.link.cache.LinkCache;
+import com.schw.urlshortener.link.click.ClickRegistry;
 import com.schw.urlshortener.link.domain.ResolutionOutcome;
 import com.schw.urlshortener.link.domain.ShortCode;
 import com.schw.urlshortener.link.domain.ShortLink;
@@ -25,11 +26,14 @@ class ResolveController {
   private final ShortLinkRepository repository;
   private final LinkCache cache;
   private final Clock clock;
+  private final ClickRegistry clickRegistry;
 
-  ResolveController(ShortLinkRepository repository, LinkCache cache, Clock clock) {
+  ResolveController(
+      ShortLinkRepository repository, LinkCache cache, Clock clock, ClickRegistry clickRegistry) {
     this.repository = repository;
     this.cache = cache;
     this.clock = clock;
+    this.clickRegistry = clickRegistry;
   }
 
   @GetMapping("/{code}")
@@ -41,6 +45,8 @@ class ResolveController {
     if (outcome != ResolutionOutcome.RESOLVABLE) {
       throw new ShortLinkGoneException(code, outcome);
     }
+
+    clickRegistry.increment(shortLink.code());
 
     return ResponseEntity.status(HttpStatus.FOUND)
         .location(URI.create(shortLink.targetUrl().value()))

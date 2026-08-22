@@ -11,9 +11,11 @@ record ShortLinkEntity(
     String createdBy,
     Instant createdAt,
     Instant expiresAt,
-    boolean active) {
+    boolean active,
+    long clickCount) {
 
   ShortLinkEntity deactivated() {
-    return new ShortLinkEntity(shortCode, targetUrl, createdBy, createdAt, expiresAt, false);
+    return new ShortLinkEntity(
+        shortCode, targetUrl, createdBy, createdAt, expiresAt, false, clickCount);
   }
 }

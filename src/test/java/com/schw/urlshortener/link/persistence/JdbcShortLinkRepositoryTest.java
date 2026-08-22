@@ -9,6 +9,7 @@ import com.schw.urlshortener.link.domain.TargetUrl;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.jdbc.core.JdbcAggregateTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -33,6 +35,8 @@ class JdbcShortLinkRepositoryTest {
   @Autowired private ShortLinkRepository repository;
 
   @Autowired private JdbcAggregateTemplate template;
+
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
   void savedGeneratedShortLinkIsFoundByItsCode() {
@@ -108,7 +112,8 @@ class JdbcShortLinkRepositoryTest {
     ShortCode fresh = ShortCode.reconstitute("retry-fresh");
     repository.saveWithAlias(taken, TARGET_URL, "api-key-1", CREATED_AT, Optional.empty());
     Iterator<ShortCode> attempts = List.of(taken, fresh).iterator();
-    JdbcShortLinkRepository retrying = new JdbcShortLinkRepository(template, attempts::next);
+    JdbcShortLinkRepository retrying =
+        new JdbcShortLinkRepository(template, jdbcTemplate, attempts::next);
 
     ShortLink saved = retrying.saveGenerated(TARGET_URL, "api-key-2", CREATED_AT, Optional.empty());
 
@@ -119,7 +124,8 @@ class JdbcShortLinkRepositoryTest {
   void generatedSaveThrowsAfterExhaustingRetries() {
     ShortCode taken = ShortCode.reconstitute("retry-exhausted");
     repository.saveWithAlias(taken, TARGET_URL, "api-key-1", CREATED_AT, Optional.empty());
-    JdbcShortLinkRepository alwaysColliding = new JdbcShortLinkRepository(template, () -> taken);
+    JdbcShortLinkRepository alwaysColliding =
+        new JdbcShortLinkRepository(template, jdbcTemplate, () -> taken);
 
     assertThatExceptionOfType(ShortCodeGenerationExhaustedException.class)
         .isThrownBy(
@@ -132,5 +138,29 @@ class JdbcShortLinkRepositoryTest {
   void deactivatingACodeThatWasNeverIssuedThrows() {
     assertThatExceptionOfType(NoSuchElementException.class)
         .isThrownBy(() -> repository.deactivate(ShortCode.reconstitute("nvrissu2")));
+  }
+
+  @Test
+  void recordClicksIncrementsRatherThanOverwritesTheStoredCount() {
+    ShortLink saved =
+        repository.saveGenerated(TARGET_URL, "api-key-1", CREATED_AT, Optional.empty());
+
+    repository.recordClicks(Map.of(saved.code(), 5L));
+    repository.recordClicks(Map.of(saved.code(), 3L));
+
+    assertThat(repository.findByCode(saved.code()).get().clickCount()).isEqualTo(8L);
+  }
+
+  @Test
+  void recordClicksUpdatesMultipleShortCodesIndependentlyInOneBatch() {
+    ShortLink first =
+        repository.saveGenerated(TARGET_URL, "api-key-1", CREATED_AT, Optional.empty());
+    ShortLink second =
+        repository.saveGenerated(TARGET_URL, "api-key-1", CREATED_AT, Optional.empty());
+
+    repository.recordClicks(Map.of(first.code(), 4L, second.code(), 7L));
+
+    assertThat(repository.findByCode(first.code()).get().clickCount()).isEqualTo(4L);
+    assertThat(repository.findByCode(second.code()).get().clickCount()).isEqualTo(7L);
   }
 }

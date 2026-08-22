@@ -85,6 +85,23 @@ class ShortLinkTest {
   }
 
   @Test
+  void freshlyConstructedShortLinkHasAClickCountOfZero() {
+    ShortLink link = newShortLink(Optional.empty());
+
+    assertThat(link.clickCount()).isZero();
+  }
+
+  @Test
+  void reconstitutedShortLinkReportsThePersistedClickCount() {
+    ShortCode code = ShortCode.generate();
+    TargetUrl targetUrl = TargetUrl.of("https://93.184.216.34/x", "sho.rt", refusingResolver());
+
+    ShortLink link = new ShortLink(code, targetUrl, "api-key-1", CREATED_AT, Optional.empty(), 42L);
+
+    assertThat(link.clickCount()).isEqualTo(42L);
+  }
+
+  @Test
   void deactivationNeverChangesTheShortCode() {
     ShortLink link = newShortLink(Optional.empty());
     ShortCode codeBeforeDeactivation = link.code();
