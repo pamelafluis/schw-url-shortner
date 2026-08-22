@@ -133,6 +133,16 @@ class TargetUrlTest {
 				.isThrownBy(() -> TargetUrl.of("https://Sho.Rt/loop", OWN_HOST, resolver));
 	}
 
+	@Test
+	void reconstituteProducesTargetUrlWithTheStoredValueWithoutValidation() {
+		// A persisted value was already SSRF-validated once, at creation. Reconstitution
+		// must not repeat DNS resolution or own-host checks on every read — those are
+		// step-4 (API) concerns, not the persistence layer's.
+		TargetUrl targetUrl = TargetUrl.reconstitute("https://example.com/path");
+
+		assertThat(targetUrl.value()).isEqualTo("https://example.com/path");
+	}
+
 	private static HostnameResolver resolverReturning(String... literalIps) {
 		List<InetAddress> addresses = Arrays.stream(literalIps)
 				.map(TargetUrlTest::literalAddress)

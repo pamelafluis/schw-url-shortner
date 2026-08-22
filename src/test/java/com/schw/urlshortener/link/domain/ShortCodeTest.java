@@ -106,4 +106,22 @@ class ShortCodeTest {
 		assertThat(code.value()).isEqualTo("API");
 	}
 
+	@Test
+	void reconstituteProducesShortCodeWithTheStoredValueWithoutValidation() {
+		// A persisted value was already validated once, at creation. Reconstitution must
+		// not re-run alias rules — a generated 7-char code could coincidentally collide
+		// with a reserved word (e.g. "metrics") and must not be rejected on reload.
+		ShortCode code = ShortCode.reconstitute("metrics");
+
+		assertThat(code.value()).isEqualTo("metrics");
+	}
+
+	@Test
+	void reconstitutedShortCodeIsEqualToAnEquivalentGeneratedOrAliasCode() {
+		ShortCode fromAlias = ShortCode.fromAlias("launch");
+		ShortCode reconstituted = ShortCode.reconstitute("launch");
+
+		assertThat(reconstituted).isEqualTo(fromAlias).hasSameHashCodeAs(fromAlias);
+	}
+
 }
