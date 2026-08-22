@@ -1,6 +1,6 @@
 # Build Order
 
-**Current status:** step 5 complete — `link/cache` (Caffeine adapter behind a port, per-entry TTL, negative caching, bounded size, deactivate-triggered local invalidation) wired into the resolve path, plus the first end-to-end smoke test now that the API, persistence, and cache layers all exist together. Next: step 6, clicks.
+**Current status:** step 6 complete — `link/click` (ClickRegistry, scheduled flush, shutdown hook) is wired into the resolve path, reconciled with the `link/cache` seam that step 5 landed on main. Next: step 7, operability.
 
 Requirements, architecture, and the four load-bearing decisions were settled before any code was written; they live in [`../README.md`](../README.md), [`../CONTEXT.md`](../CONTEXT.md), and [`adr/`](./adr/).
 
@@ -16,7 +16,7 @@ Requirements, architecture, and the four load-bearing decisions were settled bef
 - [x] **3 — Persistence.** Spring Data JDBC adapter, unique index on ShortCode, Testcontainers integration tests including the collision-retry path.
 - [x] **4 — API.** Create, resolve, get, deactivate. MockMvc contract tests written first. `problem+json` mapping, API key filter, ownership check on delete.
 - [x] **5 — Cache.** Caffeine behind the port: TTL clamped to `min(60s, time-to-expiry)`, negative caching, bounded size, eviction on write. Test that a deactivated ShortLink stops resolving locally.
-- [ ] **6 — Clicks.** LongAdder registry, scheduled batch flush, shutdown hook. Test that N Resolutions produce N Clicks once flushed.
+- [x] **6 — Clicks.** LongAdder registry, scheduled batch flush, shutdown hook. Test that N Resolutions produce N Clicks once flushed.
 - [ ] **7 — Operability.** Structured JSON logging with request IDs, Micrometer counters and timers, OpenAPI, GitHub Actions CI.
 - [ ] **8 — Docs close-out.** Reconcile the README against what was actually built. Flip ADRs 0001–0004 from `status: proposed` to `accepted` — or rewrite any that did not survive contact with the code, which makes for a better record than one that was right first time. Fill in **Cuts** below.
 - [ ] **9 — Load test.** k6 against the redirect path; record the real p99 in the README, whatever it says.

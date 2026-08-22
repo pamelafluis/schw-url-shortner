@@ -1,5 +1,6 @@
 package com.schw.urlshortener.link.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -11,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.schw.urlshortener.link.cache.LinkCache;
+import com.schw.urlshortener.link.click.ClickRegistry;
 import com.schw.urlshortener.link.domain.ShortCode;
 import com.schw.urlshortener.link.domain.ShortLink;
 import com.schw.urlshortener.link.domain.TargetUrl;
@@ -19,6 +21,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -36,8 +39,16 @@ class ResolveControllerTest {
   private static final TargetUrl TARGET_URL = TargetUrl.reconstitute("https://example.com/x");
 
   @Autowired private MockMvc mockMvc;
+  @Autowired private ClickRegistry clickRegistry;
   @MockitoBean private ShortLinkRepository repository;
   @MockitoBean private LinkCache cache;
+
+  @BeforeEach
+  void resetClickRegistry() {
+    // The registry is a singleton reused across test methods in this Spring context; drain
+    // discards any increment left over from a previous test so state doesn't leak between them.
+    clickRegistry.drain();
+  }
 
   @Test
   void resolvableCodeRedirectsWithNoStoreCacheControl() throws Exception {
@@ -52,6 +63,59 @@ class ResolveControllerTest {
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://example.com/x"))
         .andExpect(header().string("Cache-Control", "no-store"));
+  }
+
+  @Test
+  void resolvableCodeIncrementsTheClickRegistry() throws Exception {
+    ShortLink shortLink =
+        new ShortLink(
+            ShortCode.reconstitute("aB3xK9z"), TARGET_URL, "dev-key", NOW, Optional.empty());
+    given(repository.findByCode(ShortCode.reconstitute("aB3xK9z")))
+        .willReturn(Optional.of(shortLink));
+
+    mockMvc.perform(get("/aB3xK9z")).andExpect(status().isFound());
+
+    assertThat(clickRegistry.drain()).containsEntry(ShortCode.reconstitute("aB3xK9z"), 1L);
+  }
+
+  @Test
+  void expiredCodeDoesNotIncrementTheClickRegistry() throws Exception {
+    ShortLink shortLink =
+        new ShortLink(
+            ShortCode.reconstitute("aB3xK9z"),
+            TARGET_URL,
+            "dev-key",
+            NOW.minusSeconds(7200),
+            Optional.of(NOW.minusSeconds(3600)));
+    given(repository.findByCode(ShortCode.reconstitute("aB3xK9z")))
+        .willReturn(Optional.of(shortLink));
+
+    mockMvc.perform(get("/aB3xK9z")).andExpect(status().isGone());
+
+    assertThat(clickRegistry.drain()).isEmpty();
+  }
+
+  @Test
+  void deactivatedCodeDoesNotIncrementTheClickRegistry() throws Exception {
+    ShortLink shortLink =
+        new ShortLink(
+            ShortCode.reconstitute("aB3xK9z"), TARGET_URL, "dev-key", NOW, Optional.empty());
+    shortLink.deactivate();
+    given(repository.findByCode(ShortCode.reconstitute("aB3xK9z")))
+        .willReturn(Optional.of(shortLink));
+
+    mockMvc.perform(get("/aB3xK9z")).andExpect(status().isGone());
+
+    assertThat(clickRegistry.drain()).isEmpty();
+  }
+
+  @Test
+  void codeThatWasNeverIssuedDoesNotIncrementTheClickRegistry() throws Exception {
+    given(repository.findByCode(ShortCode.reconstitute("nvrissud"))).willReturn(Optional.empty());
+
+    mockMvc.perform(get("/nvrissud")).andExpect(status().isNotFound());
+
+    assertThat(clickRegistry.drain()).isEmpty();
   }
 
   @Test
@@ -193,6 +257,11 @@ class ResolveControllerTest {
     @Bean
     Clock clock() {
       return Clock.fixed(NOW, ZoneOffset.UTC);
+    }
+
+    @Bean
+    ClickRegistry clickRegistry() {
+      return new ClickRegistry();
     }
   }
 }

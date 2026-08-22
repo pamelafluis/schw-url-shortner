@@ -168,6 +168,20 @@ class LinksControllerTest {
   }
 
   @Test
+  void getMetadataReportsANonZeroPersistedClickCount() throws Exception {
+    ShortLink shortLink =
+        new ShortLink(
+            ShortCode.reconstitute("aB3xK9z"), TARGET_URL, "dev-key", NOW, Optional.empty(), 7L);
+    given(repository.findByCode(ShortCode.reconstitute("aB3xK9z")))
+        .willReturn(Optional.of(shortLink));
+
+    mockMvc
+        .perform(get("/api/v1/links/aB3xK9z").header("X-API-Key", "dev-key"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.clickCount").value(7));
+  }
+
+  @Test
   void getMetadataForUnissuedCodeReturns404() throws Exception {
     given(repository.findByCode(ShortCode.reconstitute("nvrissud"))).willReturn(Optional.empty());
 
