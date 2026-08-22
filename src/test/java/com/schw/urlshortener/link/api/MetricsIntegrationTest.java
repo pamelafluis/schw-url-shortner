@@ -1,4 +1,4 @@
-package com.schw.urlshortener;
+package com.schw.urlshortener.link.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

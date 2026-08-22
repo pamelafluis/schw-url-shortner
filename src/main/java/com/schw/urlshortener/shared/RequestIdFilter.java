@@ -24,7 +24,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
-public class RequestIdFilter extends OncePerRequestFilter {
+class RequestIdFilter extends OncePerRequestFilter {
 
   static final String HEADER = "X-Request-Id";
   private static final String MDC_KEY = "requestId";

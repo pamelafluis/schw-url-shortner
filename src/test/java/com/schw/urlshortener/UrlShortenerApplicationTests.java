@@ -42,4 +42,12 @@ class UrlShortenerApplicationTests {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).contains("\"/api/v1/links");
   }
+
+  @Test
+  void openApiDocsDescribeProblemJsonErrorResponses() {
+    ResponseEntity<String> response = restTemplate.getForEntity("/v3/api-docs", String.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).contains("application/problem+json");
+  }
 }
