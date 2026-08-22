@@ -6,6 +6,8 @@ import com.schw.urlshortener.link.domain.ResolutionOutcome;
 import com.schw.urlshortener.link.domain.ShortCode;
 import com.schw.urlshortener.link.domain.ShortLink;
 import com.schw.urlshortener.link.persistence.ShortLinkRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.net.URI;
 import java.time.Clock;
 import java.util.Optional;
@@ -23,25 +25,49 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 class ResolveController {
 
+  private static final String OUTCOME_COUNTER = "link.resolutions";
+  private static final String LATENCY_TIMER = "link.resolve";
+
   private final ShortLinkRepository repository;
   private final LinkCache cache;
   private final Clock clock;
   private final ClickRegistry clickRegistry;
+  private final MeterRegistry meterRegistry;
 
   ResolveController(
-      ShortLinkRepository repository, LinkCache cache, Clock clock, ClickRegistry clickRegistry) {
+      ShortLinkRepository repository,
+      LinkCache cache,
+      Clock clock,
+      ClickRegistry clickRegistry,
+      MeterRegistry meterRegistry) {
     this.repository = repository;
     this.cache = cache;
     this.clock = clock;
     this.clickRegistry = clickRegistry;
+    this.meterRegistry = meterRegistry;
   }
 
   @GetMapping("/{code}")
   ResponseEntity<Void> resolve(@PathVariable String code) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    try {
+      return doResolve(code);
+    } finally {
+      sample.stop(meterRegistry.timer(LATENCY_TIMER));
+    }
+  }
+
+  private ResponseEntity<Void> doResolve(String code) {
     ShortCode shortCode = ShortCode.reconstitute(code);
-    ShortLink shortLink = load(shortCode).orElseThrow(() -> new ShortLinkNotFoundException(code));
+    Optional<ShortLink> found = load(shortCode);
+    if (found.isEmpty()) {
+      countOutcome("not-found");
+      throw new ShortLinkNotFoundException(code);
+    }
+    ShortLink shortLink = found.get();
 
     ResolutionOutcome outcome = shortLink.resolutionOutcome(clock.instant());
+    countOutcome(outcomeTag(outcome));
     if (outcome != ResolutionOutcome.RESOLVABLE) {
       throw new ShortLinkGoneException(code, outcome);
     }
@@ -52,6 +78,18 @@ class ResolveController {
         .location(URI.create(shortLink.targetUrl().value()))
         .cacheControl(CacheControl.noStore())
         .build();
+  }
+
+  private void countOutcome(String outcome) {
+    meterRegistry.counter(OUTCOME_COUNTER, "outcome", outcome).increment();
+  }
+
+  private static String outcomeTag(ResolutionOutcome outcome) {
+    return switch (outcome) {
+      case RESOLVABLE -> "resolvable";
+      case EXPIRED -> "expired";
+      case DEACTIVATED -> "deactivated";
+    };
   }
 
   // Cache checked before Postgres; a miss is loaded from Postgres and cached either way
