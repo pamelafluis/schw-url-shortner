@@ -18,6 +18,8 @@ public interface LinkCache {
    * Optional is a negative-cache entry (a ShortCode already confirmed not to exist); a present
    * inner Optional is a cache hit.
    */
+  // TODO(#15): replace this nested Optional with a small sum type (Uncached/Hit/NegativeHit)
+  // so the three states are self-evident at call sites instead of relying on this javadoc.
   Optional<Optional<ShortLink>> get(ShortCode code);
 
   /**
