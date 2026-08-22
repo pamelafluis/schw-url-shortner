@@ -24,6 +24,16 @@ public final class TargetUrl {
 		return new TargetUrl(rawUrl);
 	}
 
+	/**
+	 * Rehydrates a TargetUrl from a value already SSRF-validated once, at creation (a
+	 * persisted row). Skips DNS resolution and the own-host check, which depend on
+	 * live network/API-layer context the persistence layer doesn't have and shouldn't
+	 * re-run on every read.
+	 */
+	public static TargetUrl reconstitute(String persistedValue) {
+		return new TargetUrl(persistedValue);
+	}
+
 	private static URI parse(String rawUrl) {
 		try {
 			return new URI(rawUrl);

@@ -44,6 +44,15 @@ public final class ShortCode {
 		return new ShortCode(rawAlias);
 	}
 
+	/**
+	 * Rehydrates a ShortCode from a value already validated once, at creation (a
+	 * persisted row). Skips charset/reserved-word checks, which are creation-time
+	 * rules, not invariants of the value itself.
+	 */
+	public static ShortCode reconstitute(String persistedValue) {
+		return new ShortCode(persistedValue);
+	}
+
 	public String value() {
 		return value;
 	}
