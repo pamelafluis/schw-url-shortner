@@ -38,3 +38,12 @@ Anything dropped gets an entry below and a paragraph in the README's *Deliberate
 ## Cuts
 
 *Nothing cut yet. Recorded here as it happens, in the commit where the decision is made.*
+
+---
+
+## Roadmap
+
+Ideas that don't fit the day but are worth doing next — additional static
+analysis, CI enforcement, and other production hardening — are tracked
+separately in [`ROADMAP.md`](./ROADMAP.md) rather than here, so this file stays
+scoped to build order.
