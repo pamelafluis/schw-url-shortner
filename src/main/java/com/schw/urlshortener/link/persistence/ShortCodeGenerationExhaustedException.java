@@ -8,8 +8,9 @@ package com.schw.urlshortener.link.persistence;
  */
 public class ShortCodeGenerationExhaustedException extends RuntimeException {
 
-	public ShortCodeGenerationExhaustedException(int attempts, Throwable lastConflict) {
-		super("Failed to generate a unique ShortCode after %d attempts".formatted(attempts), lastConflict);
+	public ShortCodeGenerationExhaustedException(int maxRetries, Throwable lastConflict) {
+		super("Failed to generate a unique ShortCode after the initial attempt and %d retries".formatted(maxRetries),
+				lastConflict);
 	}
 
 }

@@ -9,4 +9,8 @@ import java.time.Instant;
 record ShortLinkEntity(@Id String shortCode, String targetUrl, String createdBy, Instant createdAt,
 		Instant expiresAt, boolean active) {
 
+	ShortLinkEntity deactivated() {
+		return new ShortLinkEntity(shortCode, targetUrl, createdBy, createdAt, expiresAt, false);
+	}
+
 }

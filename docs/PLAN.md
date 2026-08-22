@@ -1,6 +1,6 @@
 # Build Order
 
-**Current status:** step 2 complete — `link/domain` (ShortCode, TargetUrl/SSRF, Alias rules, ShortLink expiry/deactivation) built test-first, pure JUnit, no Spring. Next: step 3, persistence.
+**Current status:** step 3 complete — `link/persistence` (Spring Data JDBC adapter for ShortLink, unique index on ShortCode, collision-retry) built test-first against Testcontainers Postgres. Next: step 4, API.
 
 Requirements, architecture, and the four load-bearing decisions were settled before any code was written; they live in [`../README.md`](../README.md), [`../CONTEXT.md`](../CONTEXT.md), and [`adr/`](./adr/).
 
@@ -13,7 +13,7 @@ Requirements, architecture, and the four load-bearing decisions were settled bef
 - [x] **0 — Documentation foundation.** `README.md` (targets, API, architecture, declined scope) and this file.
 - [x] **1 — Scaffold.** Maven, Spring Boot 4, Java 21, Docker Compose with Postgres, Flyway baseline, health check responding.
 - [x] **2 — Domain, test-first.** ShortCode generation, TargetUrl and SSRF validation, Alias rules and reserved words, expiry evaluation. Pure JUnit, no Spring, no database. Red → green → refactor, visible in the history.
-- [ ] **3 — Persistence.** Spring Data JDBC adapter, unique index on ShortCode, Testcontainers integration tests including the collision-retry path.
+- [x] **3 — Persistence.** Spring Data JDBC adapter, unique index on ShortCode, Testcontainers integration tests including the collision-retry path.
 - [ ] **4 — API.** Create, resolve, get, deactivate. MockMvc contract tests written first. `problem+json` mapping, API key filter, ownership check on delete.
 - [ ] **5 — Cache.** Caffeine behind the port: TTL clamped to `min(60s, time-to-expiry)`, negative caching, bounded size, eviction on write. Test that a deactivated ShortLink stops resolving locally.
 - [ ] **6 — Clicks.** LongAdder registry, scheduled batch flush, shutdown hook. Test that N Resolutions produce N Clicks once flushed.

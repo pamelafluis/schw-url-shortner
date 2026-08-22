@@ -16,7 +16,9 @@ import java.util.function.Supplier;
 @Repository
 public class JdbcShortLinkRepository implements ShortLinkRepository {
 
-	private static final int MAX_GENERATION_ATTEMPTS = 3;
+	// ADR-0001: "the writer retrying up to three times on conflict" — the initial
+	// attempt plus up to three retries, four attempts total.
+	private static final int MAX_RETRIES = 3;
 
 	private final JdbcAggregateTemplate template;
 	private final Supplier<ShortCode> codeGenerator;
@@ -37,7 +39,7 @@ public class JdbcShortLinkRepository implements ShortLinkRepository {
 	public ShortLink saveGenerated(TargetUrl targetUrl, String createdBy, Instant createdAt,
 			Optional<Instant> expiresAt) {
 		DuplicateKeyException lastConflict = null;
-		for (int attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
+		for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
 			ShortLink candidate = new ShortLink(codeGenerator.get(), targetUrl, createdBy, createdAt, expiresAt);
 			try {
 				template.insert(toEntity(candidate));
@@ -47,7 +49,7 @@ public class JdbcShortLinkRepository implements ShortLinkRepository {
 				lastConflict = e;
 			}
 		}
-		throw new ShortCodeGenerationExhaustedException(MAX_GENERATION_ATTEMPTS, lastConflict);
+		throw new ShortCodeGenerationExhaustedException(MAX_RETRIES, lastConflict);
 	}
 
 	@Override
@@ -74,8 +76,7 @@ public class JdbcShortLinkRepository implements ShortLinkRepository {
 		if (entity == null) {
 			throw new NoSuchElementException("ShortCode '%s' was never issued".formatted(code.value()));
 		}
-		template.update(new ShortLinkEntity(entity.shortCode(), entity.targetUrl(), entity.createdBy(),
-				entity.createdAt(), entity.expiresAt(), false));
+		template.update(entity.deactivated());
 	}
 
 	private static ShortLinkEntity toEntity(ShortLink shortLink) {
