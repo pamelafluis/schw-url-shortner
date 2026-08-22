@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Manual end-to-end demo of the step-4 API against a real docker-compose stack.
+# Manual end-to-end demo of the step-4 API and step-5 cache against a real docker-compose stack.
 # Usage: ./scripts/demo.sh          (brings the stack up, runs the demo, leaves it running)
 #        ./scripts/demo.sh --down   (also tears the stack down afterwards)
 set -euo pipefail
@@ -61,11 +61,38 @@ req "GET $BASE_URL/api/v1/links/$CODE  (no key)"
 curl -s -i "$BASE_URL/api/v1/links/$CODE" | grep -E '^HTTP'
 curl -s "$BASE_URL/api/v1/links/$CODE" | jq .
 
+step "Resolve it again, a few times (cache hit — no Postgres round trip; watch the timings drop)"
+req "GET $BASE_URL/$CODE  x3, timed"
+curl -s -o /dev/null -w "  resolve #1 (already cached from the step above): %{time_total}s, HTTP %{http_code}\n" "$BASE_URL/$CODE"
+curl -s -o /dev/null -w "  resolve #2 (cache hit):                          %{time_total}s, HTTP %{http_code}\n" "$BASE_URL/$CODE"
+curl -s -o /dev/null -w "  resolve #3 (cache hit):                          %{time_total}s, HTTP %{http_code}\n" "$BASE_URL/$CODE"
+
+step "Resolve a never-issued code twice (negative caching — repeated scans stay off Postgres, per ADR-0004)"
+NEG_CODE="cache-demo-neg-$(date +%s)"
+req "GET $BASE_URL/$NEG_CODE  x2, timed"
+curl -s -o /dev/null -w "  resolve #1 (cache miss -> Postgres, 404): %{time_total}s, HTTP %{http_code}\n" "$BASE_URL/$NEG_CODE"
+curl -s -o /dev/null -w "  resolve #2 (negative cache hit, 404):     %{time_total}s, HTTP %{http_code}\n" "$BASE_URL/$NEG_CODE"
+
+step "Create a link that expires in 5s, resolve it now, then again after it expires (cache HIT still re-checks expiry)"
+SHORT_EXPIRES=$(date -u -d "+5 seconds" +%Y-%m-%dT%H:%M:%SZ)
+req "POST $BASE_URL/api/v1/links  expiresAt=$SHORT_EXPIRES"
+SHORT_BODY=$(curl -s -X POST "$BASE_URL/api/v1/links" \
+  -H "X-API-Key: $API_KEY" -H 'Content-Type: application/json' \
+  -d "{\"targetUrl\":\"https://example.com/short-lived\",\"expiresAt\":\"$SHORT_EXPIRES\"}")
+echo "$SHORT_BODY" | jq .
+SHORT_CODE=$(echo "$SHORT_BODY" | jq -r .code)
+req "GET $BASE_URL/$SHORT_CODE  (before expiresAt, populates the cache)"
+curl -s -i "$BASE_URL/$SHORT_CODE" | grep -E '^HTTP'
+echo "  sleeping 6s, past expiresAt but well inside the cache's 60s TTL..."
+sleep 6
+req "GET $BASE_URL/$SHORT_CODE  (still cached, but expired — expect 410, not a stale 302)"
+curl -s -o /dev/null -w "  %{time_total}s, HTTP %{http_code}\n" "$BASE_URL/$SHORT_CODE"
+
 step "Deactivate it (expect 204)"
 req "DELETE $BASE_URL/api/v1/links/$CODE  (X-API-Key: $API_KEY)"
 curl -s -i -X DELETE "$BASE_URL/api/v1/links/$CODE" -H "X-API-Key: $API_KEY" | grep -E '^HTTP'
 
-step "Resolve after deactivation (expect 410)"
+step "Resolve after deactivation, immediately (expect 410 — deactivate invalidates the local cache entry, no 60s wait needed)"
 req "GET $BASE_URL/$CODE"
 curl -s -i "$BASE_URL/$CODE" | grep -E '^HTTP'
 curl -s "$BASE_URL/$CODE" | jq .

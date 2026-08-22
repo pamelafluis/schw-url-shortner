@@ -1,5 +1,6 @@
 package com.schw.urlshortener.link.api;
 
+import com.schw.urlshortener.link.cache.LinkCache;
 import com.schw.urlshortener.link.domain.HostnameResolver;
 import com.schw.urlshortener.link.domain.ShortCode;
 import com.schw.urlshortener.link.domain.ShortLink;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 class LinksController {
 
   private final ShortLinkRepository repository;
+  private final LinkCache cache;
   private final HostnameResolver hostnameResolver;
   private final Clock clock;
   private final String ownHost;
@@ -37,11 +39,13 @@ class LinksController {
 
   LinksController(
       ShortLinkRepository repository,
+      LinkCache cache,
       HostnameResolver hostnameResolver,
       Clock clock,
       @Value("${app.own-host}") String ownHost,
       @Value("${app.base-url}") String baseUrl) {
     this.repository = repository;
+    this.cache = cache;
     this.hostnameResolver = hostnameResolver;
     this.clock = clock;
     this.ownHost = ownHost;
@@ -80,6 +84,7 @@ class LinksController {
       throw new NotOwnerException(code);
     }
     repository.deactivate(shortLink.code());
+    cache.invalidate(shortLink.code());
     return ResponseEntity.noContent().build();
   }
 
