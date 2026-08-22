@@ -24,6 +24,16 @@ class TargetUrlTest {
   }
 
   @Test
+  void rejectsANullOrBlankUrl() {
+    HostnameResolver resolver = refusingResolver();
+
+    assertThatExceptionOfType(InvalidTargetUrlException.class)
+        .isThrownBy(() -> TargetUrl.of(null, OWN_HOST, resolver));
+    assertThatExceptionOfType(InvalidTargetUrlException.class)
+        .isThrownBy(() -> TargetUrl.of("  ", OWN_HOST, resolver));
+  }
+
+  @Test
   void rejectsSchemesOtherThanHttpAndHttps() {
     HostnameResolver resolver = resolverReturning("93.184.216.34");
 

@@ -16,3 +16,11 @@ management:
   endpoint:
     health:
       show-details: never
+
+app:
+  # Comma-separated API keys; each doubles as a caller identity (createdBy/ownership), see link/api.
+  api-keys: ${API_KEYS:dev-key}
+  # Bare hostname (no scheme/port) checked against a TargetUrl's host for the SSRF own-host rule.
+  own-host: ${APP_HOST:localhost}
+  # Full base URL used to build the shortUrl returned to callers.
+  base-url: ${APP_BASE_URL:http://localhost:8080}

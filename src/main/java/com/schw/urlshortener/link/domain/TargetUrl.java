@@ -18,6 +18,9 @@ public final class TargetUrl {
   }
 
   public static TargetUrl of(String rawUrl, String ownHost, HostnameResolver resolver) {
+    if (rawUrl == null || rawUrl.isBlank()) {
+      throw new InvalidTargetUrlException("TargetUrl is required");
+    }
     URI uri = parse(rawUrl);
     requireHttpOrHttpsScheme(uri, rawUrl);
     requireAllowedHost(uri, rawUrl, ownHost, resolver);
