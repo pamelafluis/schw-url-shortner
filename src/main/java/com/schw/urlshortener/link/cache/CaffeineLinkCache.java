@@ -28,10 +28,8 @@ public final class CaffeineLinkCache implements LinkCache {
     this(clock, Ticker.systemTicker(), MAXIMUM_SIZE);
   }
 
-  /**
-   * Exposes the Caffeine {@link Ticker} and bound so tests can drive expiry and eviction
-   * deterministically without waiting on real time or inserting 100k entries.
-   */
+  // Test-only seam: exposes the Caffeine Ticker and bound so tests can drive expiry and
+  // eviction deterministically without waiting on real time or inserting 100k entries.
   CaffeineLinkCache(Clock clock, Ticker ticker, long maximumSize) {
     this.clock = clock;
     this.cache =

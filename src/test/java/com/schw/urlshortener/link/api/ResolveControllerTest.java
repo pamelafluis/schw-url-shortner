@@ -122,6 +122,40 @@ class ResolveControllerTest {
   }
 
   @Test
+  void cachedHitThatIsNowExpiredReturns410() throws Exception {
+    ShortLink shortLink =
+        new ShortLink(
+            ShortCode.reconstitute("aB3xK9z"),
+            TARGET_URL,
+            "dev-key",
+            NOW.minusSeconds(7200),
+            Optional.of(NOW.minusSeconds(3600)));
+    given(cache.get(ShortCode.reconstitute("aB3xK9z")))
+        .willReturn(Optional.of(Optional.of(shortLink)));
+
+    mockMvc
+        .perform(get("/aB3xK9z"))
+        .andExpect(status().isGone())
+        .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+    verify(repository, never()).findByCode(ShortCode.reconstitute("aB3xK9z"));
+  }
+
+  @Test
+  void cachedHitThatIsDeactivatedReturns410() throws Exception {
+    ShortLink shortLink =
+        new ShortLink(
+            ShortCode.reconstitute("aB3xK9z"), TARGET_URL, "dev-key", NOW, Optional.empty());
+    shortLink.deactivate();
+    given(cache.get(ShortCode.reconstitute("aB3xK9z")))
+        .willReturn(Optional.of(Optional.of(shortLink)));
+
+    mockMvc.perform(get("/aB3xK9z")).andExpect(status().isGone());
+
+    verify(repository, never()).findByCode(ShortCode.reconstitute("aB3xK9z"));
+  }
+
+  @Test
   void cachedNegativeEntryReturns404WithoutConsultingPostgres() throws Exception {
     given(cache.get(ShortCode.reconstitute("nvrissud"))).willReturn(Optional.of(Optional.empty()));
 

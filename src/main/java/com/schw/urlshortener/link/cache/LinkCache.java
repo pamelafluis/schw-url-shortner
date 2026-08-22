@@ -12,10 +12,11 @@ import java.util.Optional;
 public interface LinkCache {
 
   /**
-   * Looks up a cached lookup result. The outer {@link Optional} is empty when {@code code} has
-   * never been cached (the caller must consult Postgres and then {@link #put}). When the outer
-   * Optional is present, an empty inner Optional is a negative-cache entry (a ShortCode already
-   * confirmed not to exist); a present inner Optional is a cache hit.
+   * Looks up a cached lookup result. The outer {@link Optional} is empty when {@code code} is not
+   * currently cached — never cached, or evicted by TTL/size/invalidation — meaning the caller must
+   * consult Postgres and then {@link #put}. When the outer Optional is present, an empty inner
+   * Optional is a negative-cache entry (a ShortCode already confirmed not to exist); a present
+   * inner Optional is a cache hit.
    */
   Optional<Optional<ShortLink>> get(ShortCode code);
 
